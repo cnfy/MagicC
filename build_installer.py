@@ -61,7 +61,7 @@ def build():
         cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.DER))
     shutil.copyfile(cert_path, dist / 'MagicC.cer')
     shutil.copyfile(ROOT / 'media/app.ico', dist / 'MagicC.ico')
-    for script in ('menu.ps1', 'trust.ps1'):
+    for script in ('menu.ps1', 'trust.ps1', 'lifecycle.ps1', 'prepare.ps1'):
         (dist / script).write_text((ROOT / 'installer' / script).read_text(encoding='utf-8'), encoding='utf-8-sig')
     run([sdk / 'makeappx.exe', 'pack', '/o', '/nv', '/d', package, '/p', dist / 'MagicC.Menu.msix'])
     # Never print the signing password or the full signing command.

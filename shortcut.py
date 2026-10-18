@@ -3,7 +3,7 @@ import time
 import tkinter as tk
 from pathlib import Path
 import win32clipboard
-from win32api import GetCursorPos
+from win32api import GetCursorPos, GetMonitorInfo, MonitorFromPoint
 from screeninfo import get_monitors
 from PIL import Image, ImageTk, ImageGrab, ImageOps, ImageEnhance
 from toolbar import Toolbar
@@ -266,18 +266,38 @@ class Shortcut(tk.Toplevel):
     def paint_release(self, event):
         self.shortcuting = False
         if self.shortcut_area and self.shortcut_area[1][0] > self.shortcut_area[0][0] and self.shortcut_area[1][1] > self.shortcut_area[0][1]:
-            # 放置一次获取组件宽度
-            self.tool_bar.place(x=event.x, y=event.y)
-            self.tool_bar.update()
-            offsetx = self.tool_bar.winfo_width() - self.tool_bar.adapt_size(5)
-            offsety = self.tool_bar.adapt_size(15)
-            self.tool_bar.place(x=event.x - offsetx, y=event.y + offsety)
+            self.tool_bar.update_idletasks()
+            work = GetMonitorInfo(MonitorFromPoint((
+                self.myscreen.x + self.myscreen.width // 2,
+                self.myscreen.y + self.myscreen.height // 2), 2))['Work']
+            bounds = (max(0, work[0] - self.myscreen.x),
+                      max(0, work[1] - self.myscreen.y),
+                      min(self.myscreen.width, work[2] - self.myscreen.x),
+                      min(self.myscreen.height, work[3] - self.myscreen.y))
+            position = self.toolbar_position(
+                self.shortcut_area,
+                (self.tool_bar.winfo_reqwidth(), self.tool_bar.winfo_reqheight()),
+                bounds, max(1, self.tool_bar.adapt_size(15)))
+            self.tool_bar.place(x=position[0], y=position[1])
             x0 = self.shortcut_area[0][0] + self.myscreen.x
             y0 = self.shortcut_area[0][1] + self.myscreen.y
             x1 = self.shortcut_area[1][0] + self.myscreen.x
             y1 = self.shortcut_area[1][1] + self.myscreen.y
             self.shortcut_area = [(x0,y0),(x1,y1)]
             self.settings.update('recent_area', self.shortcut_area)
+
+    @staticmethod
+    def toolbar_position(selection, size, bounds, gap):
+        (x0, y0), (x1, y1) = selection
+        width, height = size
+        left, top, right, bottom = bounds
+        x = max(left, min(x1 - width, right - width))
+        y = y1 + gap
+        if y + height > bottom:
+            y = y0 - gap - height
+        # A full-height selection has no outside space; keep the buttons inside.
+        y = max(top, min(y, bottom - height))
+        return x, y
 
     def open_gif_recorder(self, event):
         self.gif_recorder = GifRecorder(self, self.shortcut_area[0] + self.shortcut_area[1], settings=self.settings,

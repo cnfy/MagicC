@@ -23,6 +23,27 @@ def load_method(filename, class_name, method):
 
 
 class RegressionTests(unittest.TestCase):
+    def test_toolbar_remains_in_work_area_at_screen_edges(self):
+        position = load_method('shortcut.py', 'Shortcut', 'toolbar_position')
+        bounds = (0, 0, 1920, 1040)  # Taskbar below the work area.
+        cases = [([(1700, 900), (1920, 1080)], (1680, 850)),
+                 ([(0, 900), (20, 1080)], (0, 850)),
+                 ([(0, 0), (1920, 1080)], (1680, 0)),
+                 ([(100, 100), (500, 300)], (260, 310))]
+        for selection, expected in cases:
+            with self.subTest(selection=selection):
+                x, y = position(selection, (240, 40), bounds, 10)
+                self.assertEqual((x, y), expected)
+                self.assertGreaterEqual(x, 0)
+                self.assertGreaterEqual(y, 0)
+                self.assertLessEqual(x + 240, bounds[2])
+                self.assertLessEqual(y + 40, bounds[3])
+
+    def test_toolbar_respects_top_and_left_taskbars(self):
+        position = load_method('shortcut.py', 'Shortcut', 'toolbar_position')
+        self.assertEqual(position([(0, 0), (100, 100)], (240, 40),
+                                  (48, 32, 1920, 1080), 10), (48, 110))
+
     def test_cancel_consumes_release_before_closing_overlay(self):
         callbacks, closed = [], []
         owner = SimpleNamespace(after_idle=callbacks.append,

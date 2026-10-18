@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $installRoot = $PSScriptRoot
 $marker = Join-Path $installRoot 'modern-menu.enabled'
 $certificateMarker = Join-Path $installRoot 'certificate.imported'
+. (Join-Path $PSScriptRoot 'lifecycle.ps1')
 function Update-Certificate([string]$operation) {
     $arguments = '-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $installRoot 'trust.ps1') + '" -Action ' + $operation
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -16,11 +17,15 @@ function Update-Certificate([string]$operation) {
 }
 try {
     if ($Action -in 'Unregister','Uninstall') {
+        Write-Output 'Releasing MagicC Explorer menu...'
+        Stop-MenuHost
+        Write-Output 'Removing MagicC menu package...'
         Get-AppxPackage -Name 'MagicC.Desktop' | Remove-AppxPackage
         if (Test-Path -LiteralPath $marker) { Remove-Item -LiteralPath $marker }
         if ($Action -eq 'Uninstall' -and (Test-Path -LiteralPath $certificateMarker)) {
             $thumbprint = (Get-Content -LiteralPath $certificateMarker -Raw).Trim()
             if ($thumbprint -match '^[0-9A-F]{40}$') {
+                Write-Output 'Removing MagicC test certificate; administrator confirmation may appear...'
                 Update-Certificate 'Remove'
             }
             Remove-Item -LiteralPath $certificateMarker
